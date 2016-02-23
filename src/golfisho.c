@@ -6,10 +6,37 @@
  */
 
 #include <assert.h>
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <assert.h>
+#include <stddef.h>
+#include <unistd.h>
 
 #define CPX_VACIO &(cpx ) { 0 }
+
+#define CACA_COMUN_ASSERT_DUROTE 0
+#define CACA_COMUN_ASSERT_SUAVECITO 1
+#define CACA_COMUN_ASSERT_NIMADRES 2
+
+#define CACA_COMUN_TIPO_ASSERT CACA_COMUN_ASSERT_DUROTE
+
+#if CACA_COMUN_TIPO_ASSERT == CACA_COMUN_ASSERT_DUROTE
+#define assert_timeout(condition) assert(condition);
+#endif
+#if CACA_COMUN_TIPO_ASSERT == CACA_COMUN_ASSERT_SUAVECITO
+#define assert_timeout(condition) if(!(condition)){printf("fuck\n");sleep(10);}
+#endif
+#if CACA_COMUN_TIPO_ASSERT == CACA_COMUN_ASSERT_NIMADRES
+#define assert_timeout(condition) 0
+#endif
+
+#define caca_comun_max(x,y) ((x) < (y) ? (y) : (x))
+#define caca_comun_min(x,y) ((x) < (y) ? (x) : (y))
+
+typedef unsigned int tipo_dato;
 
 double two_pi;
 
@@ -56,15 +83,15 @@ cpx *EXP(cpx *caca, double theta) {
 // size:   length of the input/output {MUST BE A POWER OF 2}
 // dir:    either plus or minus one (direction of the FFT)
 // RESULT: out[k] = \sum_{j=0}^{size - 1} in[j] * exp(dir * 2pi * i * j * k / size)
-void FFT(cpx *in, cpx *out, int step, int size, int dir) {
+void cpx_fft(cpx *in, cpx *out, int step, int size, int dir) {
 	if (size < 1)
 		return;
 	if (size == 1) {
 		out[0] = in[0];
 		return;
 	}
-	FFT(in, out, step * 2, size / 2, dir);
-	FFT(in + step, out + size / 2, step * 2, size / 2, dir);
+	cpx_fft(in, out, step * 2, size / 2, dir);
+	cpx_fft(in + step, out + size / 2, step * 2, size / 2, dir);
 	for (int i = 0; i < size / 2; i++) {
 		cpx even = out[i];
 		cpx odd = out[i + (size / 2)];
@@ -91,62 +118,102 @@ void FFT(cpx *in, cpx *out, int step, int size, int dir) {
 //   3. Get h by taking the inverse FFT (use dir = -1 as the argument)
 //      and *dividing by N*. DO NOT FORGET THIS SCALING FACTOR.
 
-int main(void) {
-	printf("If rows come in identical pairs, then everything works.\n");
+void cpx_multiplicacion_polinomio(tipo_dato *coeficientes_a,
+		tipo_dato *coeficientes_b, tipo_dato *coeficientes_resultado,
+		int num_coef_a, int num_coef_b, int num_coef_res) {
 
-	cpx a[8] = { { 0 }, { 1, 0 }, { 1, 3 }, { 0, 5 }, { 1, 0 }, { 0 }, { 2, 0 },
-			{ 0 } };
-	cpx b[8] = { { 1 }, { 0, -2 }, { 0, 1 }, { 3, 0 }, { -1, 0 }, { -3, 0 }, {
-			1, 0 }, { -2, 0 } };
-	cpx A[8] = { 0 };
-	cpx B[8] = { 0 };
+	cpx *coef_a_complejos = NULL;
+	cpx *coef_b_complejos = NULL;
+	cpx *coef_a_complejos_fft = NULL;
+	cpx *coef_b_complejos_fft = NULL;
+	cpx *coef_res_complejos = NULL;
+	cpx *producto_ab = NULL;
 
 	two_pi = 4 * acos(0);
 
-	FFT(a, A, 1, 8, 1);
-	FFT(b, B, 1, 8, 1);
+	assert_timeout(num_coef_res >= num_coef_a + num_coef_b - 1);
+
+	coef_a_complejos = calloc(num_coef_a, sizeof(cpx));
+	coef_b_complejos = calloc(num_coef_b, sizeof(cpx));
+	coef_a_complejos_fft = calloc(num_coef_res, sizeof(cpx));
+	coef_b_complejos_fft = calloc(num_coef_res, sizeof(cpx));
+	coef_res_complejos = calloc(num_coef_res, sizeof(cpx));
+	producto_ab = calloc(num_coef_res, sizeof(cpx));
+
+	for (int i = 0; i < num_coef_a; i++) {
+		coef_a_complejos[i].a = coeficientes_a[i];
+	}
+	for (int i = 0; i < num_coef_b; i++) {
+		coef_b_complejos[i].a = coeficientes_b[i];
+	}
+
+	cpx_fft(coef_a_complejos, coef_a_complejos_fft, 1, num_coef_res, 1);
+	cpx_fft(coef_b_complejos, coef_b_complejos_fft, 1, num_coef_res, 1);
 
 	printf("transf a y b con fft\n");
-	for (int i = 0; i < 8; i++) {
-		printf("%7.2lf%7.2lf", A[i].a, A[i].b);
+	for (int i = 0; i < num_coef_res; i++) {
+		printf("%7.2lf%7.2lf", coef_a_complejos_fft[i].a,
+				coef_a_complejos_fft[i].b);
 	}
 	printf("\n");
 	printf("transf a y b al chingadazo \n");
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < num_coef_res; i++) {
 		cpx *Ai = &(cpx ) { 0 };
-		for (int j = 0; j < 8; j++) {
+		for (int j = 0; j < num_coef_res; j++) {
 			cpx_sum(Ai, Ai,
-					cpx_mult(CPX_VACIO, a + j,
-							EXP(CPX_VACIO, j * i * two_pi / 8)));
+					cpx_mult(CPX_VACIO, coef_a_complejos + j,
+							EXP(CPX_VACIO, j * i * two_pi / num_coef_res)));
 		}
 		printf("%7.2lf%7.2lf", Ai->a, Ai->b);
 	}
 	printf("\n");
 
-	cpx AB[8] = { 0 };
-	for (int i = 0; i < 8; i++) {
-		cpx_mult(AB + i, A + i, B + i);
+	for (int i = 0; i < num_coef_res; i++) {
+		cpx_mult(producto_ab + i, coef_a_complejos_fft + i,
+				coef_b_complejos_fft + i);
 	}
-	cpx aconvb[8] = { 0 };
-	FFT(AB, aconvb, 1, 8, -1);
-	for (int i = 0; i < 8; i++) {
-		cpx_div(aconvb + i, aconvb + i, &(cpx ) { 8, 0 });
+	cpx_fft(producto_ab, coef_res_complejos, 1, num_coef_res, -1);
+	for (int i = 0; i < num_coef_res; i++) {
+		cpx_div(coef_res_complejos + i, coef_res_complejos + i, &(cpx ) {
+						num_coef_res, 0 });
 	}
 	printf("con fft\n");
-	for (int i = 0; i < 8; i++) {
-		printf("%7.2lf%7.2lf", aconvb[i].a, aconvb[i].b);
+	for (int i = 0; i < num_coef_res; i++) {
+		printf("%7.2lf%7.2lf", coef_res_complejos[i].a,
+				coef_res_complejos[i].b);
 	}
 	printf("\n");
 	printf("al chingadazo \n");
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < num_coef_res; i++) {
 		cpx *aconvbi = &(cpx ) { 0 };
-		for (int j = 0; j < 8; j++) {
+		for (int j = 0; j < num_coef_res; j++) {
 			cpx_sum(aconvbi, aconvbi,
-					cpx_mult(&(cpx ) { 0 }, a + j, b + ((8 + i - j) % 8)));
+					cpx_mult(&(cpx ) { 0 }, coef_a_complejos + j,
+							coef_b_complejos
+									+ ((num_coef_res + i - j) % num_coef_res)));
 		}
 		printf("%7.2lf%7.2lf", aconvbi->a, aconvbi->b);
 	}
 	printf("\n");
 
-	return 0;
+	for (int i = 0; i < num_coef_res; i++) {
+		coeficientes_resultado[i] = coef_res_complejos[i].a;
+	}
+
+	free(coef_a_complejos);
+	free(coef_b_complejos);
+	free(coef_a_complejos_fft);
+	free(coef_b_complejos_fft);
+	free(coef_res_complejos);
+	free(producto_ab);
+}
+
+int main() {
+	tipo_dato a[8] = { 0, 1, 3, 5, 1, 0, 2, 0 };
+	tipo_dato b[8] = { 1, 2, 1, 3, 1, 3, 1, 2 };
+
+	tipo_dato c[16] = { 0 };
+
+	cpx_multiplicacion_polinomio(a, b, c, 8, 8, 16);
+
 }
