@@ -17,6 +17,9 @@
 
 #define CPX_VACIO &(cpx ) { 0 }
 
+#define TAM_MAX_LINEA 6
+#define MAX_NUM 200000
+
 #define CACA_COMUN_ASSERT_DUROTE 0
 #define CACA_COMUN_ASSERT_SUAVECITO 1
 #define CACA_COMUN_ASSERT_NIMADRES 2
@@ -32,6 +35,11 @@
 #if CACA_COMUN_TIPO_ASSERT == CACA_COMUN_ASSERT_NIMADRES
 #define assert_timeout(condition) 0
 #endif
+
+/*
+ #define caca_log_debug(formato, args...) 0
+ */
+#define caca_log_debug printf
 
 #define caca_comun_max(x,y) ((x) < (y) ? (y) : (x))
 #define caca_comun_min(x,y) ((x) < (y) ? (x) : (y))
@@ -208,12 +216,76 @@ void cpx_multiplicacion_polinomio(tipo_dato *coeficientes_a,
 	free(producto_ab);
 }
 
+static inline char *caca_arreglo_a_cadena(tipo_dato *arreglo, int tam_arreglo,
+		char *buffer) {
+	int i;
+	char *ap_buffer = NULL;
+	int characteres_escritos = 0;
+
+	memset(buffer, 0, 100);
+	ap_buffer = buffer;
+
+	for (i = 0; i < tam_arreglo; i++) {
+		characteres_escritos += sprintf(ap_buffer + characteres_escritos, "%d",
+				*(arreglo + i));
+		if (i < tam_arreglo - 1) {
+			*(ap_buffer + characteres_escritos++) = ',';
+		}
+	}
+	*(ap_buffer + characteres_escritos) = '\0';
+	return ap_buffer;
+}
+
+static inline int lee_matrix_long_stdin(tipo_dato *matrix, int *num_filas,
+		int *num_columnas, int num_max_filas, int num_max_columnas) {
+	int indice_filas = 0;
+	int indice_columnas = 0;
+	long numero = 0;
+	char *siguiente_cadena_numero = NULL;
+	char *cadena_numero_actual = NULL;
+	char *linea = NULL;
+
+	linea = calloc(TAM_MAX_LINEA, sizeof(char));
+
+	while (indice_filas < num_max_filas && fgets(linea, TAM_MAX_LINEA, stdin)) {
+		indice_columnas = 0;
+		cadena_numero_actual = linea;
+		for (siguiente_cadena_numero = linea;; siguiente_cadena_numero =
+				cadena_numero_actual) {
+			numero = strtol(siguiente_cadena_numero, &cadena_numero_actual, 10);
+			if (cadena_numero_actual == siguiente_cadena_numero) {
+				break;
+			}
+			*(matrix + indice_filas * num_max_columnas + indice_columnas) =
+					numero;
+			caca_log_debug("en col %d, fil %d, el valor %lu\n", indice_columnas,
+					indice_filas, numero);
+			indice_columnas++;
+			caca_log_debug("las columnas son %d\n", indice_columnas);
+		}
+		if (num_columnas) {
+			num_columnas[indice_filas] = indice_columnas;
+		}
+		indice_filas++;
+		caca_log_debug("las filas son %d, con clos %d\n", indice_filas,
+				indice_columnas);
+	}
+
+	*num_filas = indice_filas;
+	free(linea);
+	return 0;
+}
+
 int main() {
 	tipo_dato a[8] = { 0, 1, 3, 5, 1, 0, 2, 0 };
 	tipo_dato b[8] = { 1, 2, 1, 3, 1, 3, 1, 2 };
 
 	tipo_dato c[16] = { 0 };
+	char buffer[100] = { '\0' };
 
 	cpx_multiplicacion_polinomio(a, b, c, 8, 8, 16);
+
+	caca_log_debug("el resultado entero %s\n",
+			caca_arreglo_a_cadena(c, 16, buffer));
 
 }
