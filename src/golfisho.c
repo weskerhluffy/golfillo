@@ -21,6 +21,7 @@
 #define MAX_NUM 200000
 #define MAX_LINEAS MAX_NUM
 #define MAX_COEFICIENTES 524288
+#define BITCH_VECTOR_NUM_BITS (sizeof(bitch_vector) * 8)
 
 #define CACA_COMUN_ASSERT_DUROTE 0
 #define CACA_COMUN_ASSERT_SUAVECITO 1
@@ -51,7 +52,7 @@
 #define caca_comun_min(x,y) ((x) < (y) ? (x) : (y))
 
 typedef unsigned int tipo_dato;
-typedef unsigned long long bitch_vector;
+typedef unsigned long bitch_vector;
 
 typedef enum BOOLEANOS {
 	falso = 0, verdadero
@@ -68,11 +69,13 @@ static bool caca_comun_checa_bit(bitch_vector *bits, int posicion) {
 	bool res = falso;
 	int idx_arreglo = 0;
 	int idx_registro = 0;
+	bitch_vector tmp = 0;
 
 	idx_arreglo = posicion / 64;
 	idx_registro = posicion % 64;
 
-	res = !!(bits[idx_arreglo] & (bitch_vector) (1 << idx_registro));
+	tmp = ((bitch_vector) 1) << idx_registro;
+	res = !!(bits[idx_arreglo] & tmp);
 
 	return res;
 }
@@ -84,7 +87,7 @@ static void caca_comun_asigna_bit(bitch_vector *bits, int posicion) {
 	idx_arreglo = posicion / 64;
 	idx_registro = posicion % 64;
 
-	bits[idx_arreglo] |= (bitch_vector) (1 << idx_registro);
+	bits[idx_arreglo] |= (bitch_vector) (((bitch_vector) 1) << idx_registro);
 
 }
 
@@ -388,19 +391,9 @@ static void golfisho_main() {
 	int i = 0;
 	int j = 0;
 	int k = 0;
-	int num_filas = 0;
-	int tam_coeficientes_perrisha = 0;
-	int tam_coeficientes_resultado_redondeado = 0;
-	int tam_coeficientes_resultado = 0;
-	int conteo_oyos_factibles = 0;
 	bitch_vector *distancias_oyos_presentes = NULL;
 	bitch_vector *distancias_oyos_factibles = NULL;
-	tipo_dato max_distancia_perrisha = 0;
-	tipo_dato max_distancia_oio = 0;
 	tipo_dato numero_distancias_perisha = 0;
-	tipo_dato numero_distancias_oyos = 0;
-	tipo_dato numero_distancias_oyos_unicos = 0;
-	tipo_dato dist_act = 0;
 	tipo_dato *matrix = NULL;
 	tipo_dato *distancias_perrilla = NULL;
 	tipo_dato *distancias_oyos = NULL;
@@ -409,236 +402,264 @@ static void golfisho_main() {
 	tipo_dato *b = NULL;
 	tipo_dato *c = NULL;
 	tipo_dato *c1 = NULL;
-	char buffer[100] = { '\0' };
-	char buffer1[100] = { '\0' };
 
-	matrix = calloc(MAX_LINEAS * 2 + 2, sizeof(tipo_dato));
-	assert_timeout(matrix);
+	while (scanf("%d", &numero_distancias_perisha) == 1) {
+		int num_filas = 0;
+		int tam_coeficientes_perrisha = 0;
+		int tam_coeficientes_resultado_redondeado = 0;
+		int tam_coeficientes_resultado = 0;
+		int conteo_oyos_factibles = 0;
+		tipo_dato dist_act = 0;
+		tipo_dato max_distancia_perrisha = 0;
+		tipo_dato max_distancia_oio = 0;
+		tipo_dato numero_distancias_oyos_unicos = 0;
+		tipo_dato numero_distancias_oyos = 0;
+		char buffer[100] = { '\0' };
+		char buffer1[100] = { '\0' };
 
-	lee_matrix_long_stdin(matrix, &num_filas, NULL, MAX_LINEAS * 2 + 2, 1);
+		matrix = calloc(numero_distancias_perisha, sizeof(tipo_dato));
+		assert_timeout(matrix);
 
-	numero_distancias_perisha = *matrix;
-	distancias_perrilla = matrix + 1;
-	numero_distancias_oyos = *(matrix + 1 + numero_distancias_perisha);
-	distancias_oyos = matrix + 1 + numero_distancias_perisha + 1;
+		lee_matrix_long_stdin(matrix, &num_filas, NULL,
+				numero_distancias_perisha, 1);
 
-	caca_log_debug("el numero de distancias perrilla %d el de oyos %d\n",
-			numero_distancias_perisha, numero_distancias_oyos);
-	caca_log_debug("las dstancias perrilla %s de oyos %s\n",
-			caca_arreglo_a_cadena(distancias_perrilla, numero_distancias_perisha, buffer),
-			caca_arreglo_a_cadena(distancias_oyos, numero_distancias_oyos, buffer1));
+		distancias_perrilla = matrix;
 
-	assert_timeout(numero_distancias_perisha);
-	assert_timeout(numero_distancias_perisha<=MAX_NUM);
-	assert_timeout(numero_distancias_oyos);
-	assert_timeout(numero_distancias_oyos<=MAX_NUM);
+		scanf("%d", &numero_distancias_oyos);
 
-	distancias_oyos_factibles = calloc(
-			(MAX_NUM + 1) / (sizeof(bitch_vector) * 8) + 1,
-			sizeof(bitch_vector));
-	assert_timeout(distancias_oyos_factibles);
+		matrix = calloc(numero_distancias_oyos, sizeof(tipo_dato));
+		assert_timeout(matrix);
 
-	distancias_oyos_presentes = calloc(
-			(MAX_NUM / (sizeof(bitch_vector) * 8)) + 1, sizeof(bitch_vector));
-	assert_timeout(distancias_oyos_presentes);
+		lee_matrix_long_stdin(matrix, &num_filas, NULL, numero_distancias_oyos,
+				1);
 
-	distancias_oyos_unicas = calloc(MAX_NUM, sizeof(tipo_dato));
-	assert_timeout(distancias_oyos_unicas);
+		distancias_oyos = matrix;
 
-	for (i = 0; i < numero_distancias_oyos; i++) {
-		dist_act = distancias_oyos[i];
-		assert_timeout(dist_act);
-		if (!caca_comun_checa_bit(distancias_oyos_presentes, dist_act)) {
-			distancias_oyos_unicas[numero_distancias_oyos_unicos++] = dist_act;
-			caca_comun_asigna_bit(distancias_oyos_presentes, dist_act);
-		}
-		if (dist_act > max_distancia_oio) {
-			max_distancia_oio = dist_act;
-		}
-	}
+		caca_log_debug("el numero de distancias perrilla %d el de oyos %d\n",
+				numero_distancias_perisha, numero_distancias_oyos);
+		caca_log_debug("las dstancias perrilla %s de oyos %s\n",
+				caca_arreglo_a_cadena(distancias_perrilla, numero_distancias_perisha, buffer),
+				caca_arreglo_a_cadena(distancias_oyos, numero_distancias_oyos, buffer1));
 
-	caca_log_debug("distancias unicas %s\n",
-			caca_arreglo_a_cadena(distancias_oyos_unicas,numero_distancias_oyos_unicos,buffer));
+		assert_timeout(numero_distancias_perisha);
+		assert_timeout(numero_distancias_perisha<=MAX_NUM);
+		assert_timeout(numero_distancias_oyos);
+		assert_timeout(numero_distancias_oyos<=MAX_NUM);
 
-	/*
-	 printf("el numero de distancias perrilla %hu el de oyos %hu\n",
-	 numero_distancias_perisha, numero_distancias_oyos);
-	 */
+		distancias_oyos_factibles = calloc(
+				(MAX_NUM + 1) / BITCH_VECTOR_NUM_BITS + 1,
+				sizeof(bitch_vector));
+		assert_timeout(distancias_oyos_factibles);
 
-	for (i = 0; i < numero_distancias_perisha; i++) {
-		dist_act = distancias_perrilla[i];
-		assert_timeout(dist_act);
-		if (dist_act > max_distancia_perrisha) {
-			max_distancia_perrisha = dist_act;
-		}
-	}
+		distancias_oyos_presentes = calloc((MAX_NUM / BITCH_VECTOR_NUM_BITS)+ 1,
+		sizeof(bitch_vector));assert_timeout(distancias_oyos_presentes)
+		;
 
-	caca_log_debug("maxima distancia perrilla %u\n", max_distancia_perrisha);
+		distancias_oyos_unicas = calloc(MAX_NUM, sizeof(tipo_dato));
+		assert_timeout(distancias_oyos_unicas);
 
-	assert_timeout(max_distancia_perrisha<=MAX_NUM);
-	assert_timeout(max_distancia_oio<=MAX_NUM);
-
-	tam_coeficientes_perrisha = max_distancia_perrisha + 1;
-	tam_coeficientes_resultado = tam_coeficientes_perrisha * 2;
-
-	tam_coeficientes_resultado_redondeado = 1;
-	while (tam_coeficientes_resultado_redondeado
-			<= tam_coeficientes_resultado - 1) {
-		tam_coeficientes_resultado_redondeado <<= 1;
-	}
-	caca_log_debug("tamano coef %u y redond %u\n", tam_coeficientes_resultado,
-			tam_coeficientes_resultado_redondeado);
-
-	assert_timeout(tam_coeficientes_resultado_redondeado<=MAX_COEFICIENTES);
-
-	/*
-	 printf("tamano coef %u y redond %u\n", tam_coeficientes_resultado,
-	 tam_coeficientes_resultado_redondeado);
-	 */
-
-	a = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
-	assert_timeout(a);
-
-	b = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
-	assert_timeout(b);
-
-	for (i = 0; i < numero_distancias_perisha; i++) {
-		tipo_dato distancia_act = 0;
-		distancia_act = distancias_perrilla[i];
-		caca_log_debug("prendiendo la caca %u \n", distancia_act);
-		*(a + distancia_act) = 1;
-		*(b + distancia_act) = distancia_act;
-	}
-
-	caca_log_debug("los coeficientes son %s\n",
-			caca_arreglo_a_cadena(a, tam_coeficientes_resultado_redondeado, buffer));
-
-#ifdef GOLFISHO_PUTEADO
-
-	c = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
-	assert_timeout(c);
-	c1 = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
-	assert_timeout(c1);
-
-	cpx_multiplicacion_polinomio(a, b, c, tam_coeficientes_resultado_redondeado,
-			tam_coeficientes_resultado_redondeado,
-			tam_coeficientes_resultado_redondeado);
-
-	caca_log_debug("el resultado entero %s\n",
-			caca_arreglo_a_cadena(c, tam_coeficientes_resultado, buffer));
-
-	cpx_multiplicacion_polinomio(a, a, c1,
-			tam_coeficientes_resultado_redondeado,
-			tam_coeficientes_resultado_redondeado,
-			tam_coeficientes_resultado_redondeado);
-
-	caca_log_debug("el resultado conteo %s\n",
-			caca_arreglo_a_cadena(c1, tam_coeficientes_resultado, buffer));
-
-	for (i = 0; i < tam_coeficientes_resultado_redondeado; i++) {
-		tipo_dato dista_act = 0;
-		tipo_dato conteo_act = 0;
-		dista_act = c[i];
-		conteo_act = c1[i];
-		if (dista_act && i < MAX_NUM + 1) {
-			if (conteo_act && dista_act) {
-				caca_log_debug("por fft activando %u\n", i);
+		for (i = 0; i < numero_distancias_oyos; i++) {
+			dist_act = distancias_oyos[i];
+			assert_timeout(dist_act);
+			if (!caca_comun_checa_bit(distancias_oyos_presentes, dist_act)) {
+				distancias_oyos_unicas[numero_distancias_oyos_unicos++] =
+						dist_act;
+				caca_comun_asigna_bit(distancias_oyos_presentes, dist_act);
+			} else {
+				caca_log_debug("oyo %u ya esta\n", dist_act);
+				dist_act = dist_act + 0;
 			}
-			caca_comun_asigna_bit(distancias_oyos_factibles, i);
+			if (dist_act > max_distancia_oio) {
+				max_distancia_oio = dist_act;
+			}
 		}
-	}
-	caca_log_debug("las distancias factilbes de fft %s\n",
-			caca_bitch_vector_a_cadena(distancias_oyos_factibles, (MAX_NUM + 1) / (sizeof(bitch_vector) * 8) + 1, buffer));
 
-	for (i = 0; i < numero_distancias_perisha; i++) {
-		tipo_dato dista_act = 0;
-		dista_act = distancias_perrilla[i];
-		caca_log_debug("por inputs activando %u\n", dista_act);
-		caca_comun_asigna_bit(distancias_oyos_factibles, dista_act);
-		if (dista_act * 2 < MAX_NUM + 1) {
-			caca_log_debug("por dobles de inputs activando %u\n",
-					dista_act * 2);
-			caca_comun_asigna_bit(distancias_oyos_factibles, dista_act * 2);
+		caca_log_debug("distancias unicas son %u %s \n",
+				numero_distancias_oyos_unicos,
+				caca_arreglo_a_cadena(distancias_oyos_unicas,numero_distancias_oyos_unicos,buffer));
+
+		/*
+		 printf("el numero de distancias perrilla %hu el de oyos %hu\n",
+		 numero_distancias_perisha, numero_distancias_oyos);
+		 */
+
+		for (i = 0; i < numero_distancias_perisha; i++) {
+			dist_act = distancias_perrilla[i];
+			assert_timeout(dist_act);
+			if (dist_act > max_distancia_perrisha) {
+				max_distancia_perrisha = dist_act;
+			}
 		}
-	}
 
-	caca_log_debug("las distancias factilbes %s\n",
-			caca_bitch_vector_a_cadena(distancias_oyos_factibles, (MAX_NUM + 1) / (sizeof(bitch_vector) * 8) + 1, buffer));
+		caca_log_debug("maxima distancia perrilla %u\n",
+				max_distancia_perrisha);
 
-	for (i = 0; i < numero_distancias_oyos_unicos; i++) {
-		tipo_dato distan_act = 0;
-		distan_act = distancias_oyos_unicas[i];
-		if (caca_comun_checa_bit(distancias_oyos_factibles, distan_act)) {
-			caca_log_debug("el # %u se puede formar\n", distan_act);
-			conteo_oyos_factibles++;
+		assert_timeout(max_distancia_perrisha<=MAX_NUM);
+		assert_timeout(max_distancia_oio<=MAX_NUM);
+
+		tam_coeficientes_perrisha = max_distancia_perrisha + 1;
+		tam_coeficientes_resultado = tam_coeficientes_perrisha * 2;
+
+		tam_coeficientes_resultado_redondeado = 1;
+		while (tam_coeficientes_resultado_redondeado
+				<= tam_coeficientes_resultado - 1) {
+			tam_coeficientes_resultado_redondeado <<= 1;
 		}
-	}
+		caca_log_debug("tamano coef %u y redond %u\n",
+				tam_coeficientes_resultado,
+				tam_coeficientes_resultado_redondeado);
 
-	caca_log_debug("el num d oios fact %u\n", conteo_oyos_factibles);
-	printf("%u\n", conteo_oyos_factibles);
+		assert_timeout(tam_coeficientes_resultado_redondeado<=MAX_COEFICIENTES);
 
-	free(c);
-	free(c1);
-	free(distancias_oyos_presentes);
+		/*
+		 printf("tamano coef %u y redond %u\n", tam_coeficientes_resultado,
+		 tam_coeficientes_resultado_redondeado);
+		 */
+
+		a = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
+		assert_timeout(a);
+
+		b = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
+		assert_timeout(b);
+
+		for (i = 0; i < numero_distancias_perisha; i++) {
+			tipo_dato distancia_act = 0;
+			distancia_act = distancias_perrilla[i];
+			caca_log_debug("prendiendo la caca %u \n", distancia_act);
+			*(a + distancia_act) = 1;
+			*(b + distancia_act) = distancia_act;
+		}
+
+		caca_log_debug("los coeficientes son %s\n",
+				caca_arreglo_a_cadena(a, tam_coeficientes_resultado_redondeado, buffer));
+
+#ifndef GOLFISHO_PUTEADO
+
+		c = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
+		assert_timeout(c);
+		c1 = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
+		assert_timeout(c1);
+
+		cpx_multiplicacion_polinomio(a, b, c,
+				tam_coeficientes_resultado_redondeado,
+				tam_coeficientes_resultado_redondeado,
+				tam_coeficientes_resultado_redondeado);
+
+		caca_log_debug("el resultado entero %s\n",
+				caca_arreglo_a_cadena(c, tam_coeficientes_resultado, buffer));
+
+		cpx_multiplicacion_polinomio(a, a, c1,
+				tam_coeficientes_resultado_redondeado,
+				tam_coeficientes_resultado_redondeado,
+				tam_coeficientes_resultado_redondeado);
+
+		caca_log_debug("el resultado conteo %s\n",
+				caca_arreglo_a_cadena(c1, tam_coeficientes_resultado, buffer));
+
+		for (i = 0; i < tam_coeficientes_resultado_redondeado; i++) {
+			tipo_dato dista_act = 0;
+			tipo_dato conteo_act = 0;
+			dista_act = c[i];
+			conteo_act = c1[i];
+			if (dista_act && i < MAX_NUM + 1) {
+				if (conteo_act && dista_act) {
+					caca_log_debug("por fft activando %u\n", i);
+				}
+				caca_comun_asigna_bit(distancias_oyos_factibles, i);
+			}
+		}
+		caca_log_debug("las distancias factilbes de fft %s\n",
+				caca_bitch_vector_a_cadena(distancias_oyos_factibles, (MAX_NUM + 1) / BITCH_VECTOR_NUM_BITS + 1, buffer));
+
+		for (i = 0; i < numero_distancias_perisha; i++) {
+			tipo_dato dista_act = 0;
+			dista_act = distancias_perrilla[i];
+			caca_log_debug("por inputs activando %u\n", dista_act);
+			caca_comun_asigna_bit(distancias_oyos_factibles, dista_act);
+			if (dista_act * 2 < MAX_NUM + 1) {
+				caca_log_debug("por dobles de inputs activando %u\n",
+						dista_act * 2);
+				caca_comun_asigna_bit(distancias_oyos_factibles, dista_act * 2);
+			}
+		}
+
+		caca_log_debug("las distancias factilbes %s\n",
+				caca_bitch_vector_a_cadena(distancias_oyos_factibles, (MAX_NUM + 1) / BITCH_VECTOR_NUM_BITS + 1, buffer));
+
+		for (i = 0; i < numero_distancias_oyos_unicos; i++) {
+			tipo_dato distan_act = 0;
+			distan_act = distancias_oyos_unicas[i];
+			if (caca_comun_checa_bit(distancias_oyos_factibles, distan_act)) {
+				caca_log_debug("el # %u se puede formar\n", distan_act);
+				conteo_oyos_factibles++;
+			}
+		}
+
+		caca_log_debug("el num d oios fact %u\n", conteo_oyos_factibles);
+		printf("%u\n", conteo_oyos_factibles);
+
+		free(c);
+		free(c1);
+		free(distancias_oyos_presentes);
 #else
-	for (i = 0; i < tam_coeficientes_resultado_redondeado; i++) {
-		int acumulador_distancia = 0;
-		for (j = 0; j <= i; j++) {
-			int numero_arriba = 0;
-			int numero_abajo = 0;
+		for (i = 0; i < tam_coeficientes_resultado_redondeado; i++) {
+			int acumulador_distancia = 0;
+			for (j = 0; j <= i; j++) {
+				int numero_arriba = 0;
+				int numero_abajo = 0;
 
-			numero_arriba = a[j];
-			numero_abajo = a[i - j];
+				numero_arriba = a[j];
+				numero_abajo = a[i - j];
 
-			caca_log_debug(
-					"con tu carota de chiste arriba %u (%u) abajo %u (%u)\n", j,
-					numero_arriba, i-j, numero_abajo);
+				caca_log_debug(
+						"con tu carota de chiste arriba %u (%u) abajo %u (%u)\n",
+						j, numero_arriba, i-j, numero_abajo);
 
-			acumulador_distancia += numero_arriba * numero_abajo;
-			caca_log_debug("acumulador distan de %u asta aora %u\n", i,
-					acumulador_distancia);
+				acumulador_distancia += numero_arriba * numero_abajo;
+				caca_log_debug("acumulador distan de %u asta aora %u\n", i,
+						acumulador_distancia);
 
+			}
+			if (acumulador_distancia) {
+				caca_log_debug("distancia %u es factivle\n", i);
+				caca_comun_asigna_bit(distancias_oyos_factibles, i);
+			}
 		}
-		if (acumulador_distancia) {
-			caca_log_debug("distancia %u es factivle\n", i);
-			caca_comun_asigna_bit(distancias_oyos_factibles, i);
+
+		for (i = 0; i < numero_distancias_perisha; i++) {
+			tipo_dato dista_act = 0;
+			dista_act = distancias_perrilla[i];
+			caca_log_debug("por inputs activando %u\n", dista_act);
+			caca_comun_asigna_bit(distancias_oyos_factibles, dista_act);
+			if (dista_act * 2 < MAX_NUM + 1) {
+				caca_log_debug("por dobles de inputs activando %u\n",
+						dista_act * 2);
+				caca_comun_asigna_bit(distancias_oyos_factibles, dista_act * 2);
+			}
 		}
-	}
 
-	for (i = 0; i < numero_distancias_perisha; i++) {
-		tipo_dato dista_act = 0;
-		dista_act = distancias_perrilla[i];
-		caca_log_debug("por inputs activando %u\n", dista_act);
-		caca_comun_asigna_bit(distancias_oyos_factibles, dista_act);
-		if (dista_act * 2 < MAX_NUM + 1) {
-			caca_log_debug("por dobles de inputs activando %u\n",
-					dista_act * 2);
-			caca_comun_asigna_bit(distancias_oyos_factibles, dista_act * 2);
+		caca_log_debug("las distancias factilbes %s\n",
+				caca_bitch_vector_a_cadena(distancias_oyos_factibles, (MAX_NUM + 1) / BITCH_VECTOR_NUM_BITS + 1, buffer));
+
+		for (i = 0; i < numero_distancias_oyos_unicos; i++) {
+			tipo_dato distan_act = 0;
+			distan_act = distancias_oyos_unicas[i];
+			if (caca_comun_checa_bit(distancias_oyos_factibles, distan_act)) {
+				caca_log_debug("el # %u se puede formar\n", distan_act);
+				conteo_oyos_factibles++;
+			}
 		}
-	}
 
-	caca_log_debug("las distancias factilbes %s\n",
-			caca_bitch_vector_a_cadena(distancias_oyos_factibles, (MAX_NUM + 1) / (sizeof(bitch_vector) * 8) + 1, buffer));
-
-	for (i = 0; i < numero_distancias_oyos_unicos; i++) {
-		tipo_dato distan_act = 0;
-		distan_act = distancias_oyos_unicas[i];
-		if (caca_comun_checa_bit(distancias_oyos_factibles, distan_act)) {
-			caca_log_debug("el # %u se puede formar\n", distan_act);
-			conteo_oyos_factibles++;
-		}
-	}
-
-	caca_log_debug("el num d oios fact %u\n", conteo_oyos_factibles);
-	printf("%u\n", conteo_oyos_factibles);
+		caca_log_debug("el num d oios fact %u\n", conteo_oyos_factibles);
+		printf("%u\n", conteo_oyos_factibles);
 
 #endif
 
-	free(b);
-	free(a);
-	free(distancias_oyos_unicas);
-	free(distancias_oyos_factibles);
-	free(matrix);
+		free(b);
+		free(a);
+		free(distancias_oyos_unicas);
+		free(distancias_oyos_factibles);
+	}
 }
 
 int main(int argc, char *argv[]) {
