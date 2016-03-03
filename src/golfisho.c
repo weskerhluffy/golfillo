@@ -3,6 +3,8 @@
  *
  *  Created on: 22/02/2016
  *      Author: ernesto
+ *
+ *      https://uva.onlinejudge.org/index.php?option=com_onlinejudge&Itemid=8&category=861&page=show_problem&problem=4744
  */
 
 #include <assert.h>
@@ -194,44 +196,10 @@ void cpx_multiplicacion_polinomio(tipo_dato *coeficientes_a,
 	cpx_fft(coef_a_complejos, coef_a_complejos_fft, 1, num_coef_res, 1);
 	cpx_fft(coef_b_complejos, coef_b_complejos_fft, 1, num_coef_res, 1);
 
-	caca_log_debug("transf a y b con fft\n");
-	caca_log_debug("coef a\n");
-	for (i = 0; i < num_coef_res; i++) {
-		caca_log_debug("%7.2lf%7.2lf", coef_a_complejos_fft[i].a,
-				coef_a_complejos_fft[i].b);
-	}
-	caca_log_debug("\n");
-	caca_log_debug("coef b\n");
-	for (i = 0; i < num_coef_res; i++) {
-		caca_log_debug("%7.2lf%7.2lf", coef_b_complejos_fft[i].a,
-				coef_b_complejos_fft[i].b);
-	}
-	caca_log_debug("\n");
-#ifndef ONLINE_JUDGE
-	caca_log_debug("transf a y b al chingadazo \n");
-	for (i = 0; i < num_coef_res; i++) {
-		cpx Ai_e = { 0 };
-		cpx *Ai = &Ai_e;
-		for (j = 0; j < num_coef_a; j++) {
-			cpx_sum(Ai, Ai,
-					cpx_mult(&tmp1, coef_a_complejos + j,
-							EXP(&tmp2, j * i * two_pi / num_coef_res)));
-		}
-		caca_log_debug("%7.2lf%7.2lf", Ai->a, Ai->b);
-	}
-	caca_log_debug("\n");
-#endif
-
 	for (i = 0; i < num_coef_res; i++) {
 		cpx_mult(producto_ab + i, coef_a_complejos_fft + i,
 				coef_b_complejos_fft + i);
 	}
-
-	caca_log_debug("producto ab\n");
-	for (i = 0; i < num_coef_res; i++) {
-		caca_log_debug("%7.2lf%7.2lf", producto_ab[i].a, producto_ab[i].b);
-	}
-	caca_log_debug("\n");
 
 	cpx_fft(producto_ab, coef_res_complejos, 1, num_coef_res, -1);
 
@@ -241,35 +209,11 @@ void cpx_multiplicacion_polinomio(tipo_dato *coeficientes_a,
 		cpx_div(coef_res_complejos + i, coef_res_complejos + i, &tmp_a);
 	}
 	caca_log_debug("con fft\n");
+
 	for (i = 0; i < num_coef_res; i++) {
-		caca_log_debug("%7.2lf%7.2lf", coef_res_complejos[i].a,
-				coef_res_complejos[i].b);
-	}
-	caca_log_debug("\n");
-#ifndef ONLINE_JUDGE
-	caca_log_debug("al chingadazo \n");
-	for (i = 0; i < num_coef_res; i++) {
-		cpx aconvbi_e = { 0 };
-		cpx *aconvbi = &aconvbi_e;
-		for (j = 0; j < num_coef_a; j++) {
-			cpx_sum(aconvbi, aconvbi,
-					cpx_mult(&tmp3, coef_a_complejos + j,
-							coef_b_complejos
-									+ ((num_coef_a + i - j) % num_coef_res)));
+		if (coef_res_complejos[i].a > 0.5) {
+			coeficientes_resultado[i] = UINT_MAX;
 		}
-		caca_log_debug("%7.2lf%7.2lf", aconvbi->a, aconvbi->b);
-	}
-	caca_log_debug("\n");
-#endif
-
-	num_buf = calloc(1000, sizeof(char));
-
-	for (i = 0; i < num_coef_res; i++) {
-		sprintf(num_buf, "%6.0lf", coef_res_complejos[i].a);
-		caca_log_debug("rep numerica de %7.10lf %s\n", coef_res_complejos[i].a,
-				num_buf);
-		coeficientes_resultado[i] = atoi(num_buf);
-		/*		coeficientes_resultado[i] = trunc(coef_res_complejos[i].a);*/
 		caca_log_debug("%7.10lf convertido a %u en %u\n",
 				coef_res_complejos[i].a, coeficientes_resultado[i], i);
 	}
@@ -279,7 +223,6 @@ void cpx_multiplicacion_polinomio(tipo_dato *coeficientes_a,
 	free(coef_b_complejos_fft);
 	free(coef_res_complejos);
 	free(producto_ab);
-	free(num_buf);
 }
 
 static char *caca_arreglo_a_cadena(tipo_dato *arreglo, int tam_arreglo,
@@ -399,9 +342,7 @@ static void golfisho_main() {
 	tipo_dato *distancias_oyos = NULL;
 	tipo_dato *distancias_oyos_unicas = NULL;
 	tipo_dato *a = NULL;
-	tipo_dato *b = NULL;
 	tipo_dato *c = NULL;
-	tipo_dato *c1 = NULL;
 
 	while (scanf("%d", &numero_distancias_perisha) == 1) {
 		int num_filas = 0;
@@ -519,15 +460,11 @@ static void golfisho_main() {
 		a = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
 		assert_timeout(a);
 
-		b = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
-		assert_timeout(b);
-
 		for (i = 0; i < numero_distancias_perisha; i++) {
 			tipo_dato distancia_act = 0;
 			distancia_act = distancias_perrilla[i];
 			caca_log_debug("prendiendo la caca %u \n", distancia_act);
 			*(a + distancia_act) = 1;
-			*(b + distancia_act) = distancia_act;
 		}
 
 		caca_log_debug("los coeficientes son %s\n",
@@ -537,30 +474,19 @@ static void golfisho_main() {
 
 		c = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
 		assert_timeout(c);
-		c1 = calloc(tam_coeficientes_resultado_redondeado, sizeof(tipo_dato));
-		assert_timeout(c1);
-
-		cpx_multiplicacion_polinomio(a, b, c,
-				tam_coeficientes_resultado_redondeado,
-				tam_coeficientes_resultado_redondeado,
-				tam_coeficientes_resultado_redondeado);
 
 		caca_log_debug("el resultado entero %s\n",
 				caca_arreglo_a_cadena(c, tam_coeficientes_resultado, buffer));
 
-		cpx_multiplicacion_polinomio(a, a, c1,
+		cpx_multiplicacion_polinomio(a, a, c,
 				tam_coeficientes_resultado_redondeado,
 				tam_coeficientes_resultado_redondeado,
 				tam_coeficientes_resultado_redondeado);
-
-		caca_log_debug("el resultado conteo %s\n",
-				caca_arreglo_a_cadena(c1, tam_coeficientes_resultado, buffer));
 
 		for (i = 0; i < tam_coeficientes_resultado_redondeado; i++) {
 			tipo_dato dista_act = 0;
 			tipo_dato conteo_act = 0;
 			dista_act = c[i];
-			conteo_act = c1[i];
 			if (dista_act && i < MAX_NUM + 1) {
 				if (conteo_act && dista_act) {
 					caca_log_debug("por fft activando %u\n", i);
@@ -592,6 +518,10 @@ static void golfisho_main() {
 			if (caca_comun_checa_bit(distancias_oyos_factibles, distan_act)) {
 				caca_log_debug("el # %u se puede formar\n", distan_act);
 				conteo_oyos_factibles++;
+				caca_log_debug("conteo de factibles %u \n",
+						conteo_oyos_factibles);
+			} else {
+				caca_log_debug("el res %u no c puede formar \n", distan_act);
 			}
 		}
 
@@ -599,7 +529,6 @@ static void golfisho_main() {
 		printf("%u\n", conteo_oyos_factibles);
 
 		free(c);
-		free(c1);
 		free(distancias_oyos_presentes);
 #else
 		for (i = 0; i < tam_coeficientes_resultado_redondeado; i++) {
@@ -655,7 +584,6 @@ static void golfisho_main() {
 
 #endif
 
-		free(b);
 		free(a);
 		free(distancias_oyos_unicas);
 		free(distancias_oyos_factibles);
